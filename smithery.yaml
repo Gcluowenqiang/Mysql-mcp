@@ -1,0 +1,95 @@
+# Smithery configuration file: https://smithery.ai/docs/build/project-config
+
+startCommand:
+  type: stdio
+  commandFunction:
+    # A JS function that produces the CLI command based on the given config to start the MCP on stdio.
+    |-
+    (config) => ({
+      command: 'python',
+      args: ['main.py'],
+      env: {
+        MYSQL_HOST: config.host,
+        MYSQL_PORT: String(config.port),
+        MYSQL_USERNAME: config.username,
+        MYSQL_PASSWORD: config.password,
+        MYSQL_DATABASE: config.database,
+        MYSQL_CONNECT_TIMEOUT: String(config.connectTimeout),
+        MYSQL_QUERY_TIMEOUT: String(config.queryTimeout),
+        MYSQL_MAX_RETRIES: String(config.maxRetries),
+        MYSQL_SECURITY_MODE: config.securityMode,
+        MYSQL_ALLOWED_SCHEMAS: config.allowedSchemas.join(','),
+        MYSQL_ENABLE_QUERY_LOG: String(config.enableQueryLog),
+        MYSQL_MAX_RESULT_ROWS: String(config.maxResultRows)
+      }
+    })
+  configSchema:
+    # JSON Schema defining the configuration options for the MCP.
+    type: object
+    required:
+      - host
+      - port
+      - username
+      - password
+      - database
+    properties:
+      host:
+        type: string
+        description: MySQL数据库主机地址
+      port:
+        type: number
+        description: MySQL数据库端口
+      username:
+        type: string
+        description: MySQL数据库用户名
+      password:
+        type: string
+        description: MySQL数据库密码
+      database:
+        type: string
+        description: MySQL数据库名称
+      connectTimeout:
+        type: number
+        default: 30
+        description: 连接超时（秒）
+      queryTimeout:
+        type: number
+        default: 60
+        description: 查询超时（秒）
+      maxRetries:
+        type: number
+        default: 3
+        description: 最大重试次数
+      securityMode:
+        type: string
+        default: readonly
+        description: 安全模式
+      allowedSchemas:
+        type: array
+        items:
+          type: string
+        default:
+          - "*"
+        description: 允许访问的数据库列表
+      enableQueryLog:
+        type: boolean
+        default: false
+        description: 是否启用查询日志
+      maxResultRows:
+        type: number
+        default: 1000
+        description: 最大返回行数
+  exampleConfig:
+    host: localhost
+    port: 3306
+    username: user
+    password: pass
+    database: mydb
+    connectTimeout: 30
+    queryTimeout: 60
+    maxRetries: 3
+    securityMode: readonly
+    allowedSchemas:
+      - "*"
+    enableQueryLog: false
+    maxResultRows: 1000

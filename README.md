@@ -1,4 +1,5 @@
 # MySQL数据库MCP服务
+[![smithery badge](https://smithery.ai/badge/@Gcluowenqiang/mysql-mcp-qyue)](https://smithery.ai/server/@Gcluowenqiang/mysql-mcp-qyue)
 
 专为Cursor IDE集成设计的MySQL数据库MCP（Model Context Protocol）服务，提供安全的MySQL数据库访问和管理功能。
 
@@ -20,6 +21,16 @@
 - Cursor IDE
 
 ### 快速安装
+
+#### Installing via Smithery
+
+To install MySQL Database Service for Claude Desktop automatically via [Smithery](https://smithery.ai/server/@Gcluowenqiang/mysql-mcp-qyue):
+
+```bash
+npx -y @smithery/cli install @Gcluowenqiang/mysql-mcp-qyue --client claude
+```
+
+#### Manual Installation
 
 ```bash
 # 克隆项目
