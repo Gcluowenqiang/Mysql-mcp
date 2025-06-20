@@ -1,0 +1,78 @@
+# Smithery configuration file: https://smithery.ai/docs/build/project-config
+
+startCommand:
+  type: stdio
+  commandFunction:
+    # A JS function that produces the CLI command based on the given config to start the MCP on stdio.
+    |-
+    (config) => ({ command: 'python', args: ['main.py'], env: Object.fromEntries(Object.entries(config).map(([k,v])=>[k.replace(/([A-Z])/g,'_$1').toUpperCase(), v.toString()])) })
+  configSchema:
+    # JSON Schema defining the configuration options for the MCP.
+    type: object
+    required:
+      - mysqlHost
+      - mysqlPort
+      - mysqlUsername
+      - mysqlPassword
+      - mysqlDatabase
+    properties:
+      mysqlHost:
+        type: string
+        description: 数据库主机地址
+      mysqlPort:
+        type: number
+        description: 数据库端口
+      mysqlUsername:
+        type: string
+        description: 数据库用户名
+      mysqlPassword:
+        type: string
+        description: 数据库密码
+      mysqlDatabase:
+        type: string
+        description: 数据库名称
+      connectTimeout:
+        type: number
+        default: 30
+        description: 连接超时时间（秒）
+      queryTimeout:
+        type: number
+        default: 60
+        description: 查询超时时间（秒）
+      maxRetries:
+        type: number
+        default: 3
+        description: 最大重试次数
+      securityMode:
+        type: string
+        default: readonly
+        description: "安全模式: readonly, limited_write, full_access"
+      allowedSchemas:
+        type: array
+        items:
+          type: string
+        default:
+          - "*"
+        description: 允许访问的数据库列表
+      enableQueryLog:
+        type: boolean
+        default: false
+        description: 是否启用查询日志
+      maxResultRows:
+        type: number
+        default: 1000
+        description: 最大返回行数
+  exampleConfig:
+    mysqlHost: localhost
+    mysqlPort: 3306
+    mysqlUsername: user
+    mysqlPassword: pass
+    mysqlDatabase: testdb
+    connectTimeout: 30
+    queryTimeout: 60
+    maxRetries: 3
+    securityMode: readonly
+    allowedSchemas:
+      - "*"
+    enableQueryLog: false
+    maxResultRows: 1000
