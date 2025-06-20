@@ -255,7 +255,7 @@ class MySQLDocumentGenerator:
         if primary_keys:
             column_defs.append(f"  PRIMARY KEY (`{'`, `'.join(primary_keys)}`)")
         
-        sql_parts.extend([def + "," for def in column_defs[:-1]])
+        sql_parts.extend([col_def + "," for col_def in column_defs[:-1]])
         sql_parts.append(column_defs[-1])
         
         # 表选项
