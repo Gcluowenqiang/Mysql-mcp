@@ -6,7 +6,7 @@ Copyright (c) 2025 qyue
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 """
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from typing import List
 from enum import Enum
 import os
@@ -42,7 +42,8 @@ class MySQLConfig(BaseModel):
     enable_query_log: bool = Field(False, description="是否启用查询日志")
     max_result_rows: int = Field(1000, description="最大返回行数")
     
-    @validator('security_mode', pre=True)
+    @field_validator('security_mode', mode='before')
+    @classmethod
     def validate_security_mode(cls, v):
         """验证安全模式"""
         if isinstance(v, str):
@@ -52,7 +53,8 @@ class MySQLConfig(BaseModel):
                 raise ValueError(f"无效的安全模式: {v}，支持的模式: {[mode.value for mode in SecurityMode]}")
         return v
     
-    @validator('allowed_schemas')
+    @field_validator('allowed_schemas')
+    @classmethod
     def validate_schemas(cls, v):
         """验证数据库列表"""
         if not v:
