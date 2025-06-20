@@ -1,4 +1,5 @@
 # MySQL数据库MCP服务
+[![smithery badge](https://smithery.ai/badge/my-mysql/mcp)](https://smithery.ai/server/my-mysql/mcp)
 
 专为Cursor IDE集成设计的MySQL数据库MCP（Model Context Protocol）服务，提供安全的MySQL数据库访问和管理功能。
 

@@ -1,0 +1,86 @@
+# Smithery configuration file: https://smithery.ai/docs/build/project-config
+
+startCommand:
+  type: stdio
+  commandFunction:
+    # A JS function that produces the CLI command based on the given config to start the MCP on stdio.
+    |-
+    (config) => ({command: 'python', args: ['main.py'], env: {
+      MYSQL_HOST: config.mysqlHost,
+      MYSQL_PORT: '' + config.mysqlPort,
+      MYSQL_USERNAME: config.mysqlUsername,
+      MYSQL_PASSWORD: config.mysqlPassword,
+      MYSQL_DATABASE: config.mysqlDatabase,
+      MYSQL_SECURITY_MODE: config.mysqlSecurityMode,
+      MYSQL_ALLOWED_SCHEMAS: JSON.stringify(config.mysqlAllowedSchemas),
+      MYSQL_CONNECT_TIMEOUT: '' + config.mysqlConnectTimeout,
+      MYSQL_QUERY_TIMEOUT: '' + config.mysqlQueryTimeout,
+      MYSQL_MAX_RESULT_ROWS: '' + config.mysqlMaxResultRows,
+      MYSQL_ENABLE_QUERY_LOG: config.mysqlEnableQueryLog ? 'true' : 'false'
+    }})
+  configSchema:
+    # JSON Schema defining the configuration options for the MCP.
+    type: object
+    required:
+      - mysqlHost
+      - mysqlPort
+      - mysqlUsername
+      - mysqlPassword
+      - mysqlDatabase
+    properties:
+      mysqlHost:
+        type: string
+        description: MySQL database host
+      mysqlPort:
+        type: number
+        default: 3306
+        description: MySQL database port
+      mysqlUsername:
+        type: string
+        description: MySQL username
+      mysqlPassword:
+        type: string
+        description: MySQL password
+      mysqlDatabase:
+        type: string
+        description: Default database name
+      mysqlSecurityMode:
+        type: string
+        default: readonly
+        description: "Security mode: readonly, limited_write, full_access"
+      mysqlAllowedSchemas:
+        type: array
+        items:
+          type: string
+        default:
+          - "*"
+        description: Allowed database schemas
+      mysqlConnectTimeout:
+        type: number
+        default: 30
+        description: Connection timeout in seconds
+      mysqlQueryTimeout:
+        type: number
+        default: 60
+        description: Query timeout in seconds
+      mysqlMaxResultRows:
+        type: number
+        default: 1000
+        description: Max result rows
+      mysqlEnableQueryLog:
+        type: boolean
+        default: false
+        description: Enable query logs
+  exampleConfig:
+    mysqlHost: localhost
+    mysqlPort: 3306
+    mysqlUsername: myuser
+    mysqlPassword: mypassword
+    mysqlDatabase: mydb
+    mysqlSecurityMode: readonly
+    mysqlAllowedSchemas:
+      - "*"
+    mysqlConnectTimeout: 30
+    mysqlQueryTimeout: 60
+    mysqlMaxResultRows: 1000
+    mysqlEnableQueryLog: false
