@@ -1,0 +1,31 @@
+{
+  "mcpServers": {
+    "mysql-db": {
+      "command": "python",
+      "args": ["D:\\your\\path\\to\\mysql-mcp\\main.py"],
+      "env": {
+        "_comment_required": "=== 必需配置 ===",
+        "MYSQL_HOST": "localhost",
+        "MYSQL_PORT": "3306",
+        "MYSQL_USERNAME": "your_username",
+        "MYSQL_PASSWORD": "your_password",
+        "MYSQL_DATABASE": "your_database",
+        
+        "_comment_security": "=== 安全配置 ===",
+        "MYSQL_SECURITY_MODE": "readonly",
+        "_comment_security_modes": "安全模式: readonly(只读) | limited_write(限制写入) | full_access(完全访问)",
+        
+        "_comment_schemas": "=== 数据库访问控制 ===",
+        "MYSQL_ALLOWED_SCHEMAS": "*",
+        "_comment_schemas_options": "数据库列表: '*'(所有) | 'auto'(自动发现) | 'db1,db2,db3'(指定列表)",
+        
+        "_comment_optional": "=== 可选配置 ===",
+        "MYSQL_CONNECT_TIMEOUT": "30",
+        "MYSQL_QUERY_TIMEOUT": "60",
+        "MYSQL_MAX_RETRIES": "3",
+        "MYSQL_MAX_RESULT_ROWS": "1000",
+        "MYSQL_ENABLE_QUERY_LOG": "false"
+      }
+    }
+  }
+} 
