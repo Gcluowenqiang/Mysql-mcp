@@ -355,8 +355,10 @@ class MySQLDocumentGenerator:
     def save_document(self, content: str, filename: str) -> str:
         """保存文档到文件"""
         try:
-            # 确保docs目录存在
-            docs_dir = "docs"
+            # 确保mysql-mcp目录下的docs目录存在
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            docs_dir = os.path.join(current_dir, "docs")
+            
             if not os.path.exists(docs_dir):
                 os.makedirs(docs_dir)
             
