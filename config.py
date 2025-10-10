@@ -53,7 +53,7 @@ class MySQLConfig(BaseModel):
                 raise ValueError(f"无效的安全模式: {v}，支持的模式: {[mode.value for mode in SecurityMode]}")
         return v
     
-    @field_validator('allowed_schemas')
+    @field_validator('allowed_schemas', mode='before')
     @classmethod
     def validate_schemas(cls, v):
         """验证数据库列表"""

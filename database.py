@@ -11,11 +11,100 @@ from mysql.connector import Error
 from typing import List, Dict, Any, Optional, Set
 import logging
 from contextlib import contextmanager
+from decimal import Decimal
+import time
+import hashlib
 from config import get_config_instance, SecurityMode
 
 # 配置日志
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+class QueryCache:
+    """查询缓存管理器"""
+    
+    def __init__(self, max_size: int = 100, ttl: int = 300):
+        """
+        初始化查询缓存
+        
+        Args:
+            max_size: 最大缓存条目数
+            ttl: 缓存生存时间（秒）
+        """
+        self.cache: Dict[str, Dict[str, Any]] = {}
+        self.max_size = max_size
+        self.ttl = ttl
+        self.access_times: Dict[str, float] = {}
+    
+    def _generate_key(self, sql: str, schema: str = None) -> str:
+        """生成缓存键"""
+        key_data = f"{sql}_{schema or ''}"
+        return hashlib.md5(key_data.encode('utf-8')).hexdigest()
+    
+    def get(self, sql: str, schema: str = None) -> Optional[List[Dict[str, Any]]]:
+        """获取缓存结果"""
+        key = self._generate_key(sql, schema)
+        
+        if key not in self.cache:
+            return None
+        
+        # 检查是否过期
+        if time.time() - self.cache[key]['timestamp'] > self.ttl:
+            self._remove(key)
+            return None
+        
+        # 更新访问时间
+        self.access_times[key] = time.time()
+        logger.debug(f"缓存命中: {sql[:50]}...")
+        return self.cache[key]['data']
+    
+    def set(self, sql: str, data: List[Dict[str, Any]], schema: str = None):
+        """设置缓存结果"""
+        key = self._generate_key(sql, schema)
+        
+        # 如果缓存已满，删除最旧的条目
+        if len(self.cache) >= self.max_size:
+            self._evict_oldest()
+        
+        self.cache[key] = {
+            'data': data,
+            'timestamp': time.time(),
+            'sql': sql,
+            'schema': schema
+        }
+        self.access_times[key] = time.time()
+        logger.debug(f"缓存设置: {sql[:50]}...")
+    
+    def _remove(self, key: str):
+        """删除缓存条目"""
+        if key in self.cache:
+            del self.cache[key]
+        if key in self.access_times:
+            del self.access_times[key]
+    
+    def _evict_oldest(self):
+        """删除最旧的缓存条目"""
+        if not self.access_times:
+            return
+        
+        oldest_key = min(self.access_times.keys(), key=lambda k: self.access_times[k])
+        self._remove(oldest_key)
+    
+    def clear(self):
+        """清空缓存"""
+        self.cache.clear()
+        self.access_times.clear()
+        logger.info("查询缓存已清空")
+    
+    def get_stats(self) -> Dict[str, Any]:
+        """获取缓存统计信息"""
+        return {
+            'cache_size': len(self.cache),
+            'max_size': self.max_size,
+            'ttl': self.ttl,
+            'entries': list(self.cache.keys())
+        }
 
 
 class SQLValidator:
@@ -132,9 +221,17 @@ class SQLValidator:
 class MySQLDatabase:
     """MySQL数据库操作类"""
     
+    # 常量定义
+    DEFAULT_SCHEMA = 'public'
+    
     def __init__(self):
         self.config = get_config_instance()
         self.sql_validator = SQLValidator()
+        # 初始化查询缓存
+        self.query_cache = QueryCache(
+            max_size=getattr(self.config, 'cache_max_size', 100),
+            ttl=getattr(self.config, 'cache_ttl', 300)
+        )
         logger.info(f"MySQL数据库服务初始化完成，安全模式: {self.config.security_mode.value}")
     
     @contextmanager
@@ -163,12 +260,19 @@ class MySQLDatabase:
                 conn.close()
                 logger.info("MySQL数据库连接已关闭")
     
-    def execute_query(self, sql: str, params: Optional[tuple] = None) -> List[Dict[str, Any]]:
+    def execute_query(self, sql: str, params: Optional[tuple] = None, use_cache: bool = True) -> List[Dict[str, Any]]:
         """执行查询语句"""
         # 安全检查：验证SQL是否符合当前安全模式
         if not self.sql_validator.validate_sql(sql, self.config.security_mode):
             error_msg = self.sql_validator.get_error_message(sql, self.config.security_mode)
             raise ValueError(f"SQL操作被安全策略禁止: {error_msg}")
+        
+        # 对于只读查询，尝试从缓存获取
+        if use_cache and sql.upper().strip().startswith(('SELECT', 'WITH', 'SHOW', 'DESCRIBE', 'EXPLAIN')):
+            cached_result = self.query_cache.get(sql)
+            if cached_result is not None:
+                logger.debug(f"从缓存返回查询结果: {sql[:50]}...")
+                return cached_result
         
         # 记录查询日志（如果启用）
         if self.config.enable_query_log:
@@ -183,12 +287,33 @@ class MySQLDatabase:
                 if sql.upper().strip().startswith(('SELECT', 'WITH', 'SHOW', 'DESCRIBE', 'EXPLAIN')):
                     results = cursor.fetchall()
                     
+                    # 处理Decimal类型，转换为float或str以支持JSON序列化
+                    def deep_convert_decimals(obj):
+                        if isinstance(obj, dict):
+                            return {k: deep_convert_decimals(v) for k, v in obj.items()}
+                        elif isinstance(obj, list):
+                            return [deep_convert_decimals(item) for item in obj]
+                        elif isinstance(obj, Decimal):
+                            try:
+                                return float(obj)
+                            except (OverflowError, ValueError):
+                                return str(obj)
+                        else:
+                            return obj
+                    
+                    results = deep_convert_decimals(results)
+                    
                     # 限制返回结果数量
                     if len(results) > self.config.max_result_rows:
                         logger.warning(f"查询结果超过限制({self.config.max_result_rows})，截断返回")
                         results = results[:self.config.max_result_rows]
                     
                     logger.info(f"查询执行成功，返回 {len(results)} 条记录")
+                    
+                    # 将查询结果缓存
+                    if use_cache:
+                        self.query_cache.set(sql, results)
+                    
                     return results
                 else:
                     # 对于非查询操作（INSERT、UPDATE等），提交事务并返回影响的行数
@@ -278,6 +403,29 @@ class MySQLDatabase:
         """
         return self.execute_safe_query(sql)
 
+    def get_table_comment(self, table_name: str, database: str = None) -> str:
+        """获取表的注释"""
+        if database is None:
+            database = self.config.database
+            
+        if not self._is_schema_allowed(database):
+            allowed_schemas = self._get_allowed_schemas_display()
+            raise ValueError(f"不允许访问数据库: {database}，允许的数据库: {allowed_schemas}")
+        
+        try:
+            sql = """
+            SELECT TABLE_COMMENT
+            FROM INFORMATION_SCHEMA.TABLES
+            WHERE TABLE_NAME = %s 
+                AND TABLE_SCHEMA = %s
+            """
+            result = self.execute_safe_query(sql, (table_name, database))
+            if result and result[0].get('TABLE_COMMENT'):
+                return result[0].get('TABLE_COMMENT')
+            return ""
+        except Exception:
+            return ""
+    
     def get_table_structure(self, table_name: str, database: str = None) -> List[Dict[str, Any]]:
         """获取表结构信息（适配MySQL数据库）"""
         if database is None:
@@ -395,6 +543,15 @@ class MySQLDatabase:
             "max_result_rows": self.config.max_result_rows,
             "query_log_enabled": self.config.enable_query_log
         }
+    
+    def get_cache_info(self) -> Dict[str, Any]:
+        """获取缓存统计信息"""
+        return self.query_cache.get_stats()
+    
+    def clear_cache(self):
+        """清空查询缓存"""
+        self.query_cache.clear()
+        logger.info("查询缓存已清空")
 
 
 # 全局数据库实例 - 延迟初始化以避免配置未就绪问题

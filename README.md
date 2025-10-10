@@ -1,103 +1,128 @@
-# MySQL数据库MCP服务
+# MySQL数据库 MCP 服务
 
-专为Cursor IDE集成设计的MySQL数据库MCP（Model Context Protocol）服务，提供安全的MySQL数据库访问和管理功能。
+这是一个专为 Cursor 设计的MySQL数据库 MCP (Model Context Protocol) 服务，提供表结构查询、文档生成和数据查询功能。
 
-## 🌟 功能特性
+## 功能特性
 
-- **🔒 多层安全控制**：三种安全模式（只读、限制写入、完全访问）
-- **📊 智能文档生成**：支持Markdown、JSON、SQL等多种格式
-- **🎯 Cursor深度集成**：专为Cursor IDE优化的MCP协议支持
-- **🛡️ SQL安全验证**：智能SQL验证器防止危险操作
-- **⚡ 高性能连接**：连接池和超时控制
-- **📋 完整表管理**：表结构、索引、约束等全方位信息
+- **Cursor 专用集成**: 专为 Cursor MCP 协议设计的数据库服务
+- **多种安全模式**: 支持只读、限制写入、完全访问三种安全级别
+- **表结构查询**: 获取数据库表的详细结构信息
+- **文档生成**: 生成 Markdown、JSON、SQL 格式的表结构文档
+- **数据库概览**: 生成整个数据库的概览文档
+- **SQL 查询执行**: 根据安全模式执行不同级别的 SQL 操作
+- **查询缓存**: 自动缓存查询结果，提升性能
 
-## 🔧 安装配置
+## 安全模式
 
-### 环境要求
+### 1. 只读模式 (readonly) - 默认模式
+- 仅允许 SELECT、SHOW、DESCRIBE、EXPLAIN 等查询操作
+- 禁止所有写入和危险操作
+- 适用于数据分析和报表查询
 
-- Python 3.8+
-- MySQL 5.7+ 或 MySQL 8.0+
-- Cursor IDE
+### 2. 限制写入模式 (limited_write)
+- 允许 SELECT、INSERT、UPDATE 操作
+- 禁止 DELETE、DROP、CREATE、ALTER 等危险操作
+- 适用于需要数据录入但要保护结构的场景
 
-### 快速安装
+### 3. 完全访问模式 (full_access)
+- 允许所有 SQL 操作
+- 谨慎使用，仅在完全信任的环境中启用
+- 适用于数据库管理和维护
+
+## 安装和配置
+
+### 1. 本地安装依赖
 
 ```bash
-# 克隆项目
-git clone https://github.com/Gcluowenqiang/Mysql-mcp.git
 cd mysql-mcp
-
-# 安装依赖
 pip install -r requirements.txt
 ```
 
-### Cursor MCP配置
+### 2. 在 Cursor 中配置
 
-在Cursor IDE中，添加以下配置到 MCP 设置：
+在 Cursor 的设置中找到 MCP 配置，添加以下内容：
 
 ```json
 {
   "mcpServers": {
-    "mysql-db": {
+    "mysql-mcp": {
       "command": "python",
-      "args": ["path/to/mysql-mcp/main.py"],
+      "args": ["F:/path/to/mysql-mcp/main.py"],
       "env": {
         "MYSQL_HOST": "localhost",
-        "MYSQL_PORT": "3306", 
+        "MYSQL_PORT": "3306",
         "MYSQL_USERNAME": "your_username",
         "MYSQL_PASSWORD": "your_password",
         "MYSQL_DATABASE": "your_database",
         "MYSQL_SECURITY_MODE": "readonly",
         "MYSQL_ALLOWED_SCHEMAS": "*",
-        "MYSQL_MAX_RESULT_ROWS": "1000"
+        "MYSQL_ENABLE_QUERY_LOG": "false"
       }
     }
   }
 }
 ```
 
-## 🚀 使用指南
+### 3. 环境变量说明
 
-### 基本操作
+**必需环境变量：**
+- `MYSQL_HOST`: 数据库主机地址
+- `MYSQL_PORT`: 数据库端口
+- `MYSQL_USERNAME`: 数据库用户名
+- `MYSQL_PASSWORD`: 数据库密码
+- `MYSQL_DATABASE`: 数据库名称
 
-1. **测试连接**
-   ```
-   在Cursor中使用MCP工具: test_connection
-   ```
+**可选环境变量：**
+- `MYSQL_SECURITY_MODE`: 安全模式 (readonly/limited_write/full_access，默认：readonly)
+- `MYSQL_ALLOWED_SCHEMAS`: 允许访问的数据库列表，支持三种配置方式：
+  - `"*"`: 允许访问所有有权限的数据库（推荐）
+  - `"auto"`: 自动发现有权限的数据库  
+  - `"db1,db2,db3"`: 明确指定数据库列表（逗号分隔）
+- `MYSQL_CONNECT_TIMEOUT`: 连接超时时间（秒，默认：30）
+- `MYSQL_QUERY_TIMEOUT`: 查询超时时间（秒，默认：60）
+- `MYSQL_MAX_RETRIES`: 最大重试次数（默认：3）
+- `MYSQL_ENABLE_QUERY_LOG`: 是否启用查询日志（true/false，默认：false）
+- `MYSQL_MAX_RESULT_ROWS`: 最大返回行数（默认：1000）
 
-2. **查看数据库概览**
-   ```
-   使用工具: generate_database_overview
-   ```
+## 使用示例
 
-3. **查询表结构**
-   ```
-   使用工具: describe_table
-   参数: table_name = "your_table"
-   ```
+### 获取安全信息
+在 Cursor 中输入：
+```
+@mysql-mcp 获取当前安全配置信息
+```
 
-4. **执行SQL查询**
-   ```
-   使用工具: execute_query
-   参数: sql = "SELECT * FROM users LIMIT 10"
-   ```
+### 查看可访问的数据库
+```
+@mysql-mcp 获取所有可访问的数据库
+```
 
-### 安全模式说明
+### 查询表列表
+```
+@mysql-mcp 列出 mydb 数据库中的所有表
+```
 
-#### 🟢 只读模式 (readonly)
-- ✅ SELECT、SHOW、DESCRIBE等查询操作
-- ❌ 禁止任何写入和修改操作
-- 🎯 **推荐**：生产环境查询、数据分析
+### 查看表结构
+```
+@mysql-mcp 描述 users 表的结构
+```
 
-#### 🟡 限制写入模式 (limited_write)  
-- ✅ 查询操作 + INSERT、UPDATE
-- ❌ 禁止DELETE、DROP、ALTER等危险操作
-- 🎯 **适用**：开发环境、数据维护
+### 执行查询（只读模式）
+```
+@mysql-mcp 查询用户表前10条记录
+```
 
-#### 🔴 完全访问模式 (full_access)
-- ✅ 所有SQL操作
-- ⚠️ **警告**：仅在完全可控的环境使用
+### 生成表文档
+```
+@mysql-mcp 为users表生成Markdown文档
+```
 
-## 📋 可用工具
+### 生成数据库概览
+```
+@mysql-mcp 生成mydb数据库的概览文档
+```
+
+## 可用工具
 
 | 工具名称 | 功能描述 | 主要参数 |
 |---------|---------|---------|
@@ -110,122 +135,83 @@ pip install -r requirements.txt
 | `execute_query` | 执行SQL语句 | `sql` |
 | `list_schemas` | 获取可用数据库列表 | - |
 
-## ⚙️ 配置参数
+## 文档生成说明
 
-### 必需环境变量
+文档生成功能会将生成的文档保存为实际文件：
 
-| 变量名 | 说明 | 示例 |
-|--------|------|------|
-| `MYSQL_HOST` | 数据库主机地址 | `localhost` |
-| `MYSQL_PORT` | 数据库端口 | `3306` |
-| `MYSQL_USERNAME` | 数据库用户名 | `myuser` |
-| `MYSQL_PASSWORD` | 数据库密码 | `mypassword` |
-| `MYSQL_DATABASE` | 默认数据库名 | `mydatabase` |
+- **保存位置**: mysql-mcp目录下的 `docs/` 文件夹
+- **文件命名**: `{database}_{table_name}_{timestamp}.{ext}` 格式
+- **支持格式**: Markdown (.md)、JSON (.json)、SQL (.sql)
 
-### 可选环境变量
-
-| 变量名 | 默认值 | 说明 |
-|--------|--------|------|
-| `MYSQL_SECURITY_MODE` | `readonly` | 安全模式 |
-| `MYSQL_ALLOWED_SCHEMAS` | `["*"]` | 允许访问的数据库列表 |
-| `MYSQL_CONNECT_TIMEOUT` | `30` | 连接超时（秒） |
-| `MYSQL_QUERY_TIMEOUT` | `60` | 查询超时（秒） |
-| `MYSQL_MAX_RESULT_ROWS` | `1000` | 最大返回行数 |
-| `MYSQL_ENABLE_QUERY_LOG` | `false` | 启用查询日志 |
-
-## 📖 文档生成
-
-### 支持格式
-
-- **Markdown**: 人类友好的文档格式
-- **JSON**: 机器可读的结构化数据
-- **SQL**: 可执行的建表语句
-
-### 生成示例
-
-```python
-# 生成单表Markdown文档
-generate_table_doc(table_name="users", format="markdown")
-
-# 生成数据库概览
-generate_database_overview()
-
-# 生成SQL建表语句
-generate_table_doc(table_name="orders", format="sql")
+**示例输出**:
+```
+✅ 文档生成成功!
+📁 保存路径: docs/mydb_users_20250110_142000.md
+📂 MCP服务目录: F:/path/to/mysql-mcp
+📊 表名: mydb.users
+📝 格式: markdown
+⏰ 生成时间: 2025-01-10 14:20:00
 ```
 
-## 🔒 安全最佳实践
+## 缓存管理
 
-1. **生产环境**：始终使用 `readonly` 模式
-2. **权限最小化**：仅授予必要的数据库权限
-3. **网络安全**：使用SSL连接，限制网络访问
-4. **监控日志**：启用查询日志监控异常操作
-5. **定期更新**：保持依赖库和数据库版本更新
+该服务提供查询缓存功能，自动缓存只读查询的结果：
 
-## 🔍 故障排除
-
-### 常见问题
-
-**Q: 连接失败？**
 ```
-A: 检查以下项目：
-   1. 数据库服务是否运行
-   2. 网络连接是否正常
-   3. 用户名密码是否正确
-   4. 防火墙设置
+# 获取缓存统计信息
+@mysql-mcp 获取查询缓存统计信息
+
+# 清空缓存
+@mysql-mcp 清空查询缓存
 ```
 
-**Q: 权限不足？**
-```
-A: 确保数据库用户具有：
-   - 目标数据库的访问权限
-   - INFORMATION_SCHEMA的查询权限
-   - 根据安全模式配置相应的操作权限
-```
+## 安全注意事项
 
-**Q: SQL被拒绝？**
-```
-A: 检查当前安全模式设置：
-   - readonly: 仅允许查询操作
-   - limited_write: 不允许DELETE/DROP等危险操作
-   - 调整安全模式或修改SQL语句
-```
+1. **生产环境**建议使用 `readonly` 模式
+2. **敏感环境**中避免使用 `full_access` 模式
+3. **密码安全**：避免在配置中使用弱密码
+4. **网络安全**：确保数据库连接使用安全的网络通道
+5. **权限最小化**：数据库用户只应获得必要的最小权限
 
-## 🧪 开发测试
+## 错误处理
 
-```bash
-# 运行单元测试
-pytest tests/
+- **配置错误**: 检查 Cursor MCP 配置中的环境变量设置
+- **连接失败**: 验证数据库连接参数和网络连通性
+- **权限不足**: 检查数据库用户权限和安全模式设置
+- **SQL 被拒绝**: 当前安全模式不允许执行该类型的 SQL 操作
 
-# 启动开发服务器
-python main.py
+## 技术架构
 
-# 检查代码质量
-flake8 *.py
-```
+### 核心模块
+- `main.py`: MCP服务主程序
+- `config.py`: 环境变量配置模块
+- `database.py`: 数据库操作和安全控制模块
+- `document_generator.py`: 文档生成模块
 
-## 📝 更新日志
+### 安全控制
+- 多级安全模式验证
+- SQL语句类型检查
+- 数据库访问权限控制
+- 查询结果行数限制
+- 连接超时和重试机制
 
-查看 [CHANGELOG.md](CHANGELOG.md) 了解版本更新信息。
+### MySQL适配
+- 使用 mysql-connector-python 驱动连接
+- 适配MySQL系统表查询语法
+- 支持MySQL约束类型识别
+- 适配MySQL数据类型映射
 
-## 🤝 贡献指南
+## 许可证
 
-1. Fork 本项目
-2. 创建特性分支 (`git checkout -b feature/amazing-feature`)
-3. 提交更改 (`git commit -m 'Add amazing feature'`)
-4. 推送到分支 (`git push origin feature/amazing-feature`)
-5. 开启 Pull Request
+本项目基于 [MIT 许可证](./LICENSE) 开源发布。
 
-## 📄 许可证
-
-本项目采用 MIT 许可证。详见 [LICENSE](LICENSE) 文件。
-
-## 🙋‍♂️ 支持
-
-- 📧 邮箱: wxhn1217@outlook.com
-- 🐛 问题反馈: [GitHub Issues](https://github.com/Gcluowenqiang/Mysql-mcp/issues)
-- 📖 文档: [项目Wiki](https://github.com/Gcluowenqiang/Mysql-mcp/wiki)
+- ✅ **自由使用**: 允许任何人免费使用、复制、修改本软件
+- ✅ **商业友好**: 支持商业使用和分发
+- ✅ **修改自由**: 可以修改源代码并发布衍生作品
+- ✅ **最小限制**: 只需保留版权声明即可
 
 ---
 
-⭐ 如果这个项目对你有帮助，请给我们一个星标！ 
+**版本**: 1.0.0  
+**更新时间**: 2025-01-10  
+**设计目标**: 专为MySQL数据库和 Cursor MCP 集成优化 
